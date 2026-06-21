@@ -5,12 +5,12 @@ import threading
 import time
 import weakref
 
-# ── Sanity check ────────────────────────────────────────────────────────────
+# -- Sanity check ------------------------------------------------------------
 if sys.version_info < (3, 14):
     raise RuntimeError("Requires CPython 3.14+")
 
-# ── Configuration ────────────────────────────────────────────────────────────
-NUM_THREADS = 16  # worker threads (no GIL → true parallelism)
+# -- Configuration ------------------------------------------------------------
+NUM_THREADS = 16  # worker threads (no GIL -> true parallelism)
 OBJECT_POOL_SIZE = 50_000  # live objects in the shared pool at any time
 MUTATION_RATE = 0.3  # fraction of pool replaced per cycle
 CYCLE_SLEEP = 0.0  # seconds between cycles (0 = full speed)
@@ -19,15 +19,15 @@ WEAKREF_FRACTION = 0.2  # fraction of pool also held as weakrefs
 DEEP_CYCLE_DEPTH = 8  # depth of reference cycles injected
 ENABLE_GC_CALLBACKS = True  # register gc callbacks (tracked from inside too)
 
-# ── Shared mutable state (deliberately racy without the GIL) ─────────────────
+# -- Shared mutable state (deliberately racy without the GIL) -----------------
 pool_lock = threading.Lock()
-shared_pool: list = []  # list of live objects — threads read & write this
+shared_pool: list = []  # list of live objects - threads read & write this
 
-# ── Object types that stress different GC paths ──────────────────────────────
+# -- Object types that stress different GC paths ------------------------------
 
 
 class Node:
-    """Doubly-linked node — forms cycles naturally."""
+    """Doubly-linked node - forms cycles naturally."""
 
     __slots__ = ("value", "left", "right", "payload")
 
@@ -39,7 +39,7 @@ class Node:
 
 
 class RefCycle:
-    """Explicit reference cycle: a → b → a."""
+    """Explicit reference cycle: a -> b -> a."""
 
     def __init__(self, depth=DEEP_CYCLE_DEPTH):
         head = self
@@ -69,16 +69,16 @@ class SharedDict:
 # One instance shared by all threads
 shared_dict = SharedDict()
 
-# Weakref set — lets us observe object death without preventing collection
+# Weakref set - lets us observe object death without preventing collection
 weak_pool: list[weakref.ref] = []
 weak_lock = threading.Lock()
 
-# ── GC callbacks (internal measurement, for cross-reference only) ─────────────
+# -- GC callbacks (internal measurement, for cross-reference only) -------------
 gc_event_log: list[tuple[str, float]] = []  # (phase, timestamp)
 gc_log_lock = threading.Lock()
 
 
-# ── Worker functions ──────────────────────────────────────────────────────────
+# -- Worker functions ----------------------------------------------------------
 
 
 def make_linked_list(length: int = 200) -> Node:
@@ -153,7 +153,7 @@ def worker_reader(stop_event: threading.Event):
             if not shared_pool:
                 continue
             sample = random.sample(shared_pool, min(200, len(shared_pool)))
-        # Traverse without the lock held — this is the racy part
+        # Traverse without the lock held - this is the racy part
         acc = 0
         for obj in sample:
             if isinstance(obj, Node):
@@ -178,10 +178,10 @@ def worker_gc_trigger(stop_event: threading.Event):
     """Periodically force full GC collections."""
     while not stop_event.is_set():
         time.sleep(0.05)
-        gc.collect(2)  # generation 2 → most expensive collection
+        gc.collect(2)  # generation 2 -> most expensive collection
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# -- Main ----------------------------------------------------------------------
 
 
 def main():
